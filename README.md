@@ -52,7 +52,7 @@ CinemaVision е десктоп приложение за управление н
 
 📌 Инсталация и стартиране
 
-git clone https://github.com/yourusername/CinemaVision-Pro.git  
+git clone https://github.com/yourusername/CinemaVision.git  
 
 pip install customtkinter  
 
