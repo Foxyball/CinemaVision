@@ -1,6 +1,7 @@
 from customtkinter import *
 import tkinter
 import time
+from PIL import Image, ImageTk
 
 # dark mode
 set_appearance_mode("dark")
@@ -11,6 +12,15 @@ app.title("Cinema Vision v1.0")
 app.geometry("400x300")
 app.iconbitmap("favicon.ico")
 app.withdraw()  # Hide the main window initially
+
+
+# Load the background image
+bg_image = Image.open("cover.jpg")
+bg_image = bg_image.resize((2000, 1000))
+bg_photo = ImageTk.PhotoImage(bg_image)
+
+bg_label = CTkLabel(app, image=bg_photo, text="")
+bg_label.place(x=0, y=0, relwidth=1, relheight=1)
 
 
 def center_window(window, parent=None):
@@ -74,6 +84,8 @@ menu.add_cascade(label="Помощ", menu=help_menu)
 
 app.config(menu=menu)
 
+#end of menu
+
 # ---------- СЪДЪРЖАНИЕ НА ОСНОВНИЯ ПРОЗОРЕЦ ----------
 label_title = CTkLabel(app, text="Cinema Vision", font=("Arial", 20))
 label_title.pack(pady=10)
@@ -83,12 +95,18 @@ CTkButton(app, text="Прожекции", command=open_projections).pack(pady=5)
 CTkButton(app, text="Продажби", command=open_sales).pack(pady=5)
 CTkButton(app, text="Отчети", command=open_reports).pack(pady=5)
 
+
+# end of main window
+
+
+
+
 # ---------- ПРОЗОРЕЦ ЗА ЗАРЕЖДАНЕ ----------
-loading_window = CTkToplevel(app)  # Changed to Toplevel instead of CTk
+loading_window = CTkToplevel(app)
 loading_window.title("Стартиране...")
 loading_window.geometry("400x100")
 loading_window.resizable(False, False)
-loading_window.overrideredirect(True)  # Remove window decorations
+loading_window.overrideredirect(True)  # removes close button and title bar
 
 # Center loading window
 loading_window.update_idletasks()
@@ -112,9 +130,9 @@ def simulate_loading():
         time.sleep(0.02)
     
     loading_window.grab_release()  
-    loading_window.destroy()  # Destroy the loading window
+    loading_window.destroy()
     app.deiconify()  # Show the main window
-    app.eval('tk::PlaceWindow . center')  # Center the main window
+    app.eval('tk::PlaceWindow . center')
 
 # Start the loading process after a short delay
 app.after(100, simulate_loading)
