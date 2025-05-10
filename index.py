@@ -9,6 +9,7 @@ from datetime import datetime
 # dark mode
 set_appearance_mode("dark")
 
+
 # main form
 app = CTk()
 app.title("Cinema Vision v1.0")
@@ -96,7 +97,8 @@ def load_projections():
                 "room": row[2],
                 "date": row[3],
                 "time": row[4],
-                "price": row[5]
+                "price": row[5],
+                "tickets": row[6]
             }
             projections.append(projection)
     return projections
@@ -519,6 +521,20 @@ def open_sales():
             for sale in sales:
                 writer.writerow([sale["sale_id"], sale["projection_id"], sale["client"], sale["tickets_count"], sale["total_amount"]])
 
+    def save_projections_to_csv(projections):
+        with open("seeders/projections.csv", "w", newline="", encoding="windows-1251") as file:
+            writer = csv.writer(file)
+            for proj in projections:
+                writer.writerow([
+                    proj["id"],
+                    proj["movie_id"],
+                    proj["room"],
+                    proj["date"],
+                    proj["time"],
+                    proj["price"],
+                    proj["tickets"]
+                ])
+
     def filter_sales_by_price(sales, min_price, max_price):
         try:
             min_price = float(min_price) if min_price else 0
@@ -536,18 +552,30 @@ def open_sales():
             projection_id = projection_name_to_id.get(selected_projection)
             client = entry_client.get().strip()
             tickets_count = entry_tickets.get().strip()
-            total_amount = entry_total_amount.get().strip()
 
-            if not (projection_id and client and tickets_count and total_amount):
+            if not (projection_id and client and tickets_count):
                 messagebox.showerror("Грешка", "Всички полета са задължителни.")
                 return
 
             try:
-                int(tickets_count)
-                float(total_amount)
-            except:
-                messagebox.showerror("Грешка", "Невалидни стойности за билети или сума.")
+                tickets_count = int(tickets_count)
+            except ValueError:
+                messagebox.showerror("Грешка", "Невалидна стойност за брой билети.")
                 return
+
+            # Check if enough tickets are available
+            available_tickets = int(projections_by_id[projection_id]["tickets"])
+            if tickets_count > available_tickets:
+                messagebox.showerror("Грешка", "Недостатъчно налични билети.")
+                return
+
+            # Calculate total amount
+            projection_price = float(projections_by_id[projection_id]["price"])
+            total_amount = tickets_count * projection_price
+
+            # Update available tickets
+            projections_by_id[projection_id]["tickets"] = str(available_tickets - tickets_count)
+            save_projections_to_csv(list(projections_by_id.values()))
 
             new_id = str(max([int(s["sale_id"]) for s in sales] + [0]) + 1)
             sales.append({
@@ -555,7 +583,7 @@ def open_sales():
                 "projection_id": projection_id,
                 "client": client,
                 "tickets_count": tickets_count,
-                "total_amount": total_amount
+                "total_amount": f"{total_amount:.2f}"
             })
             save_sales_to_csv(sales)
             add_window.destroy()
@@ -563,7 +591,7 @@ def open_sales():
 
         add_window = CTkToplevel(sales_window)
         add_window.title("Добавяне на продажба")
-        add_window.geometry("300x400")
+        add_window.geometry("300x300")
         center_window(add_window, parent=sales_window)
 
         CTkLabel(add_window, text="Прожекция:").pack(pady=2)
@@ -577,10 +605,6 @@ def open_sales():
         CTkLabel(add_window, text="Брой билети:").pack(pady=2)
         entry_tickets = CTkEntry(add_window)
         entry_tickets.pack()
-
-        CTkLabel(add_window, text="Обща сума:").pack(pady=2)
-        entry_total_amount = CTkEntry(add_window)
-        entry_total_amount.pack()
 
         CTkButton(add_window, text="Запази", command=lambda: save_new_sale(sales)).pack(pady=10)
         CTkButton(add_window, text="Отказ", fg_color="darkred", command=add_window.destroy).pack()
