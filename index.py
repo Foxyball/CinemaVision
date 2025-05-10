@@ -105,17 +105,17 @@ def load_projections():
 
 def load_sales():
     sales = []
-    with open("seeders/sales.csv", newline='', encoding='utf-8') as csvfile:
-            reader = csv.reader(csvfile)
-            for row in reader:
-                sale = {
-                    "sale_id": row[0],
-                    "projection_id": row[1],
-                    "client": row[2],
-                    "tickets_count": row[3],
-                    "total_amount": row[4]
-                }
-                sales.append(sale)
+    with open("seeders/sales.csv", newline='', encoding='windows-1251') as csvfile:
+        reader = csv.reader(csvfile)
+        for row in reader:
+            sale = {
+                "sale_id": row[0],
+                "projection_id": row[1],
+                "client": row[2],
+                "tickets_count": row[3],
+                "total_amount": row[4]
+            }
+            sales.append(sale)
     return sales
 
 
@@ -519,6 +519,17 @@ def open_sales():
             for sale in sales:
                 writer.writerow([sale["sale_id"], sale["projection_id"], sale["client"], sale["tickets_count"], sale["total_amount"]])
 
+    def filter_sales_by_price(sales, min_price, max_price):
+        try:
+            min_price = float(min_price) if min_price else 0
+            max_price = float(max_price) if max_price else float('inf')
+        except ValueError:
+            messagebox.showerror("Грешка", "Невалидни стойности за цена.")
+            return
+
+        filtered_sales = [sale for sale in sales if min_price <= float(sale["total_amount"]) <= max_price]
+        draw_table(filtered_sales)
+
     def open_add_sale(sales):
         def save_new_sale(sales):
             selected_projection = projection_combobox.get()
@@ -637,42 +648,80 @@ def open_sales():
             save_sales_to_csv(updated_sales)
             refresh_table(updated_sales)
 
+
+    def export_sales_to_report(sales):
+        try:
+            with open("report.txt", "w", encoding="utf-8") as file:
+                file.write("Продажби:\n")
+                file.write(f"{'ID':<5} {'Прожекция':<20} {'Клиент':<15} {'Билети':<10} {'Сума':<10}\n")
+                file.write("-" * 60 + "\n")
+                total_profit = 0
+                for sale in sales:
+                    projection_name = projection_id_to_name.get(sale["projection_id"])
+                    file.write(f"{sale['sale_id']:<5} {projection_name:<20} {sale['client']:<15} {sale['tickets_count']:<10} {sale['total_amount']:<10}\n")
+                    total_profit += float(sale["total_amount"])
+                file.write("-" * 60 + "\n")
+                file.write(f"Обща печалба: {total_profit:.2f} лв\n")
+            messagebox.showinfo("Успех", "Докладът е успешно експортиран в 'report.txt'.")
+        except Exception as e:
+            messagebox.showerror("Грешка", f"Неуспешно експортиране: {e}")
+
+
+
     def draw_table(data):
         for widget in scroll_frame.winfo_children():
             widget.destroy()
 
-        headers = ["ID", "Прожекция", "Клиент", "Брой билети", "Обща сума", "", ""]
+        headers = ["ID", "Прожекция", "Филм", "Клиент", "Брой билети", "Обща сума", "", ""]
         for i, h in enumerate(headers):
             CTkLabel(scroll_frame, text=h, font=("Arial", 12, "bold")).grid(row=0, column=i, padx=5, pady=5)
 
         for row_num, sale in enumerate(data, start=1):
+            projection = projections_by_id.get(sale["projection_id"], {})
+            movie_name = movies_by_id.get(projection.get("movie_id", ""), "Неизвестен филм")
             values = [
                 sale["sale_id"],
                 projection_id_to_name.get(sale["projection_id"], "Неизвестна прожекция"),
+                movie_name,
                 sale["client"],
                 sale["tickets_count"],
                 sale["total_amount"]
             ]
             for col_num, val in enumerate(values):
                 CTkLabel(scroll_frame, text=val).grid(row=row_num, column=col_num, padx=5, pady=2, sticky="w")
-            CTkButton(scroll_frame, text="🖊️ ", width=30, command=lambda sid=sale["sale_id"]: open_edit_sale(sid, sales)).grid(row=row_num, column=5, padx=2)
-            CTkButton(scroll_frame, text="🗑️ ", width=30, fg_color="darkred", command=lambda sid=sale["sale_id"]: confirm_delete_sale(sid, sales)).grid(row=row_num, column=6, padx=2)
+            CTkButton(scroll_frame, text="🖊️ ", width=30, command=lambda sid=sale["sale_id"]: open_edit_sale(sid, sales)).grid(row=row_num, column=6, padx=2)
+            CTkButton(scroll_frame, text="🗑️ ", width=30, fg_color="darkred", command=lambda sid=sale["sale_id"]: confirm_delete_sale(sid, sales)).grid(row=row_num, column=7, padx=2)
 
     projections = load_projections()
     sales = load_sales()
-    
+    movies = load_movies()
 
+    projections_by_id = {p["id"]: p for p in projections}
+    movies_by_id = {m["id"]: m["title"] for m in movies}
     projection_id_to_name = {p["id"]: f'{p["date"]} {p["time"]} - {p["room"]}' for p in projections}
     projection_name_to_id = {v: k for k, v in projection_id_to_name.items()}
 
-
     sales_window = CTkToplevel(app)
     sales_window.title("Продажби")
-    sales_window.geometry("700x500")
+    sales_window.geometry("700x550")
     sales_window.iconbitmap("favicon.ico")
     center_window(sales_window, parent=app)
 
     CTkLabel(sales_window, text="Списък с продажби", font=("Arial", 16)).pack(pady=10)
+
+    # Filter frame for price search
+    filter_frame = CTkFrame(sales_window)
+    filter_frame.pack(pady=5)
+
+    CTkLabel(filter_frame, text="Минимална цена:").pack(side="left", padx=5)
+    entry_min_price = CTkEntry(filter_frame, width=100)
+    entry_min_price.pack(side="left", padx=5)
+
+    CTkLabel(filter_frame, text="Максимална цена:").pack(side="left", padx=5)
+    entry_max_price = CTkEntry(filter_frame, width=100)
+    entry_max_price.pack(side="left", padx=5)
+
+    CTkButton(filter_frame, text="Търси", command=lambda: filter_sales_by_price(sales, entry_min_price.get(), entry_max_price.get())).pack(side="left", padx=5)
 
     scroll_frame = CTkScrollableFrame(sales_window, width=660, height=350)
     scroll_frame.pack()
@@ -680,6 +729,8 @@ def open_sales():
     draw_table(sales)
 
     CTkButton(sales_window, text="➕ Добави продажба", command=lambda: open_add_sale(sales)).pack(pady=10)
+    CTkButton(sales_window, text="📄 Експортирай", command=lambda: export_sales_to_report(sales)).pack(pady=10)
+
 
 
 def open_genres():
