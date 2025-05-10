@@ -521,7 +521,8 @@ def open_sales():
 
     def open_add_sale(sales):
         def save_new_sale(sales):
-            projection_id = projection_combobox.get()
+            selected_projection = projection_combobox.get()
+            projection_id = projection_name_to_id.get(selected_projection)
             client = entry_client.get().strip()
             tickets_count = entry_tickets.get().strip()
             total_amount = entry_total_amount.get().strip()
@@ -554,8 +555,8 @@ def open_sales():
         add_window.geometry("300x400")
         center_window(add_window, parent=sales_window)
 
-        CTkLabel(add_window, text="Прожекция ID:").pack(pady=2)
-        projection_combobox = CTkComboBox(add_window, values=[p["id"] for p in load_projections()])
+        CTkLabel(add_window, text="Прожекция:").pack(pady=2)
+        projection_combobox = CTkComboBox(add_window, values=list(projection_name_to_id.keys()))
         projection_combobox.pack()
 
         CTkLabel(add_window, text="Клиент:").pack(pady=2)
@@ -577,7 +578,8 @@ def open_sales():
         sale = [s for s in sales if s["sale_id"] == sale_id][0]
 
         def save_changes(sales):
-            projection_id = projection_combobox.get()
+            selected_projection = projection_combobox.get()
+            projection_id = projection_name_to_id.get(selected_projection)
             client = entry_client.get().strip()
             tickets_count = entry_tickets.get().strip()
             total_amount = entry_total_amount.get().strip()
@@ -606,9 +608,9 @@ def open_sales():
         edit_window.geometry("300x400")
         center_window(edit_window, parent=sales_window)
 
-        CTkLabel(edit_window, text="Прожекция ID:").pack(pady=2)
-        projection_combobox = CTkComboBox(edit_window, values=[p["id"] for p in load_projections()])
-        projection_combobox.set(sale["projection_id"])
+        CTkLabel(edit_window, text="Прожекция:").pack(pady=2)
+        projection_combobox = CTkComboBox(edit_window, values=list(projection_name_to_id.keys()))
+        projection_combobox.set(projection_id_to_name.get(sale["projection_id"], ""))
         projection_combobox.pack()
 
         CTkLabel(edit_window, text="Клиент:").pack(pady=2)
@@ -635,37 +637,35 @@ def open_sales():
             save_sales_to_csv(updated_sales)
             refresh_table(updated_sales)
 
-    def filter_by_amount():
-        amount = entry_filter_amount.get().strip()
-        if not amount:
-            messagebox.showerror("Грешка", "Моля, въведете сума.")
-            return
-
-        try:
-            amount = float(amount)
-        except:
-            messagebox.showerror("Грешка", "Невалидна сума.")
-            return
-
-        filtered_sales = [s for s in sales if float(s["total_amount"]) > amount]
-        draw_table(filtered_sales)
-
     def draw_table(data):
         for widget in scroll_frame.winfo_children():
             widget.destroy()
 
-        headers = ["ID", "Прожекция ID", "Клиент", "Брой билети", "Обща сума", "", ""]
+        headers = ["ID", "Прожекция", "Клиент", "Брой билети", "Обща сума", "", ""]
         for i, h in enumerate(headers):
             CTkLabel(scroll_frame, text=h, font=("Arial", 12, "bold")).grid(row=0, column=i, padx=5, pady=5)
 
         for row_num, sale in enumerate(data, start=1):
-            values = [sale["sale_id"], sale["projection_id"], sale["client"], sale["tickets_count"], sale["total_amount"]]
+            values = [
+                sale["sale_id"],
+                projection_id_to_name.get(sale["projection_id"], "Неизвестна прожекция"),
+                sale["client"],
+                sale["tickets_count"],
+                sale["total_amount"]
+            ]
             for col_num, val in enumerate(values):
                 CTkLabel(scroll_frame, text=val).grid(row=row_num, column=col_num, padx=5, pady=2, sticky="w")
             CTkButton(scroll_frame, text="🖊️ ", width=30, command=lambda sid=sale["sale_id"]: open_edit_sale(sid, sales)).grid(row=row_num, column=5, padx=2)
             CTkButton(scroll_frame, text="🗑️ ", width=30, fg_color="darkred", command=lambda sid=sale["sale_id"]: confirm_delete_sale(sid, sales)).grid(row=row_num, column=6, padx=2)
 
+    projections = load_projections()
     sales = load_sales()
+    
+
+    projection_id_to_name = {p["id"]: f'{p["date"]} {p["time"]} - {p["room"]}' for p in projections}
+    projection_name_to_id = {v: k for k, v in projection_id_to_name.items()}
+
+
     sales_window = CTkToplevel(app)
     sales_window.title("Продажби")
     sales_window.geometry("700x500")
@@ -673,15 +673,6 @@ def open_sales():
     center_window(sales_window, parent=app)
 
     CTkLabel(sales_window, text="Списък с продажби", font=("Arial", 16)).pack(pady=10)
-
-    filter_frame = CTkFrame(sales_window)
-    filter_frame.pack(pady=5)
-
-    CTkLabel(filter_frame, text="Филтрирай по сума над:").pack(side="left", padx=5)
-    entry_filter_amount = CTkEntry(filter_frame)
-    entry_filter_amount.pack(side="left", padx=5)
-
-    CTkButton(filter_frame, text="Филтрирай", command=filter_by_amount).pack(side="left", padx=5)
 
     scroll_frame = CTkScrollableFrame(sales_window, width=660, height=350)
     scroll_frame.pack()
