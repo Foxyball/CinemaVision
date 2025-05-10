@@ -4,6 +4,7 @@ from tkinter import messagebox
 import time
 from PIL import Image, ImageTk
 import csv
+from datetime import datetime
 
 # dark mode
 set_appearance_mode("dark")
@@ -82,21 +83,44 @@ def load_movies():
 
 # end of load movies
 
-# ---------- FUNCTIONS ----------
-# save movies to CSV
-def save_movies(movies):
-    with open("seeders/movies.csv", "w", newline="", encoding="utf-8") as file:
-        writer = csv.writer(file)
-        for movie in movies:
-            writer.writerow([
-                movie["id"],
-                movie["title"],
-                movie["genre_id"],
-                movie["duration"],
-                movie["rating"]
-            ])
 
-# end of save movies
+# load projections (id, movie_id, room, date, time, price)
+def load_projections():
+    projections = []
+    with open("seeders/projections.csv", newline='', encoding='windows-1251') as csvfile:
+        reader = csv.reader(csvfile)
+        for row in reader:
+            projection = {
+                "id": row[0],
+                "movie_id": row[1],
+                "room": row[2],
+                "date": row[3],
+                "time": row[4],
+                "price": row[5]
+            }
+            projections.append(projection)
+    return projections
+
+
+
+def load_sales():
+    sales = []
+    with open("seeders/sales.csv", newline='', encoding='utf-8') as csvfile:
+            reader = csv.reader(csvfile)
+            for row in reader:
+                sale = {
+                    "sale_id": row[0],
+                    "projection_id": row[1],
+                    "client": row[2],
+                    "tickets_count": row[3],
+                    "total_amount": row[4]
+                }
+                sales.append(sale)
+    return sales
+
+
+
+# ---------- FUNCTIONS ----------
 
 # open films form
 def open_films():
@@ -105,6 +129,22 @@ def open_films():
         films_window.destroy()
         open_films()
 
+
+    # save movies to CSV
+    def save_movies(movies):
+        with open("seeders/movies.csv", "w", newline="", encoding="utf-8") as file:
+            writer = csv.writer(file)
+            for movie in movies:
+                writer.writerow([
+                    movie["id"],
+                    movie["title"],
+                    movie["genre_id"],
+                    movie["duration"],
+                    movie["rating"]
+                ])
+
+    # end of save movies
+    
 
     # confirm delete movie
     def confirm_delete(movie_to_delete):
@@ -251,13 +291,405 @@ def open_films():
 
 
 def open_projections():
-    print("Прожекции")
+    def refresh_table(projections):
+        projections_window.destroy()
+        open_projections()
+
+    def save_projections_to_csv(projections):
+        with open("seeders/projections.csv", "w", newline="", encoding="windows-1251") as file:
+            writer = csv.writer(file)
+            for proj in projections:
+                writer.writerow(proj)
+
+    def open_add_projection(projections):
+        def save_new_projection(projections):
+            selected_movie = movie_combobox.get()
+            movie_id = movie_title_to_id.get(selected_movie)
+            date_str = entry_date.get().strip()
+            time_str = entry_time.get().strip()
+            hall = entry_hall.get().strip()
+            price = entry_price.get().strip()
+            tickets = entry_tickets.get().strip()
+
+            if not (movie_id and date_str and time_str and hall and price and tickets):
+                messagebox.showerror("Грешка", "Всички полета са задължителни.")
+                return
+
+            try:
+                datetime.strptime(date_str, "%d.%m.%Y")
+                datetime.strptime(time_str, "%H:%M")
+                float(price)
+                int(tickets)
+            except:
+                messagebox.showerror("Грешка", "Невалидна дата, час, цена или брой билети.")
+                return
+
+            new_id = str(max([int(p[0]) for p in projections] + [0]) + 1)
+            projections.append([new_id, movie_id, date_str, time_str, hall, price, tickets])
+            save_projections_to_csv(projections)
+            add_window.destroy()
+            refresh_table(projections)
+
+        add_window = CTkToplevel(projections_window)
+        add_window.title("Добавяне на прожекция")
+        add_window.geometry("300x400")
+        center_window(add_window, parent=projections_window)
+
+        CTkLabel(add_window, text="Филм:").pack(pady=2)
+        movie_combobox = CTkComboBox(add_window, values=list(movie_title_to_id.keys()))
+        movie_combobox.pack()
+
+        CTkLabel(add_window, text="Дата (д.м.г):").pack(pady=2)
+        entry_date = CTkEntry(add_window)
+        entry_date.pack()
+
+        CTkLabel(add_window, text="Час (ч:м):").pack(pady=2)
+        entry_time = CTkEntry(add_window)
+        entry_time.pack()
+
+        CTkLabel(add_window, text="Зала:").pack(pady=2)
+        entry_hall = CTkEntry(add_window)
+        entry_hall.pack()
+
+        CTkLabel(add_window, text="Цена (лв):").pack(pady=2)
+        entry_price = CTkEntry(add_window)
+        entry_price.pack()
+
+        CTkLabel(add_window, text="Брой билети:").pack(pady=2)
+        entry_tickets = CTkEntry(add_window)
+        entry_tickets.pack()
+
+        CTkButton(add_window, text="Запази", command=lambda: save_new_projection(projections)).pack(pady=10)
+        CTkButton(add_window, text="Отказ", fg_color="darkred", command=add_window.destroy).pack()
+
+    def open_edit_projection(proj_id, projections):
+        proj = [p for p in projections if p[0] == proj_id][0]
+
+        def save_changes(projections):
+            selected_movie = movie_combobox.get()
+            movie_id = movie_title_to_id.get(selected_movie)
+            date_str = entry_date.get().strip()
+            time_str = entry_time.get().strip()
+            hall = entry_hall.get().strip()
+            price = entry_price.get().strip()
+            tickets = entry_tickets.get().strip()
+
+            if not (movie_id and date_str and time_str and hall and price and tickets):
+                messagebox.showerror("Грешка", "Всички полета са задължителни.")
+                return
+
+            try:
+                datetime.strptime(date_str, "%d.%m.%Y")
+                datetime.strptime(time_str, "%H:%M")
+                float(price)
+                int(tickets)
+            except:
+                messagebox.showerror("Грешка", "Невалидна дата, час, цена или брой билети.")
+                return
+
+            proj[1] = movie_id
+            proj[2] = date_str
+            proj[3] = time_str
+            proj[4] = hall
+            proj[5] = price
+            proj[6] = tickets
+            save_projections_to_csv(projections)
+            edit_window.destroy()
+            refresh_table(projections)
+
+        edit_window = CTkToplevel(projections_window)
+        edit_window.title("Редактиране на прожекция")
+        edit_window.geometry("300x400")
+        center_window(edit_window, parent=projections_window)
+
+        CTkLabel(edit_window, text="Филм:").pack(pady=2)
+        movie_combobox = CTkComboBox(edit_window, values=list(movie_title_to_id.keys()))
+        movie_combobox.set(movie_id_to_title.get(proj[1], ""))
+        movie_combobox.pack()
+
+        CTkLabel(edit_window, text="Дата (д.м.г):").pack(pady=2)
+        entry_date = CTkEntry(edit_window)
+        entry_date.insert(0, proj[2])
+        entry_date.pack()
+
+        CTkLabel(edit_window, text="Час (ч:м):").pack(pady=2)
+        entry_time = CTkEntry(edit_window)
+        entry_time.insert(0, proj[3])
+        entry_time.pack()
+
+        CTkLabel(edit_window, text="Зала:").pack(pady=2)
+        entry_hall = CTkEntry(edit_window)
+        entry_hall.insert(0, proj[4])
+        entry_hall.pack()
+
+        CTkLabel(edit_window, text="Цена (лв):").pack(pady=2)
+        entry_price = CTkEntry(edit_window)
+        entry_price.insert(0, proj[5])
+        entry_price.pack()
+
+        CTkLabel(edit_window, text="Брой билети:").pack(pady=2)
+        entry_tickets = CTkEntry(edit_window)
+        entry_tickets.insert(0, proj[6])
+        entry_tickets.pack()
+
+        CTkButton(edit_window, text="Запази", command=lambda: save_changes(projections)).pack(pady=10)
+        CTkButton(edit_window, text="Отказ", fg_color="darkred", command=edit_window.destroy).pack()
+
+    def confirm_delete_projection(proj_id, projections):
+        if messagebox.askyesno("Потвърждение", "Наистина ли искате да изтриете тази прожекция?"):
+            updated_projections = [p for p in projections if p[0] != proj_id]
+            save_projections_to_csv(updated_projections)
+            refresh_table(updated_projections)
+
+    movies = load_movies()
+    movie_id_to_title = {m["id"]: m["title"] for m in movies}
+    movie_title_to_id = {v: k for k, v in movie_id_to_title.items()}
+
+    with open("seeders/projections.csv", newline="", encoding="windows-1251") as file:
+        reader = csv.reader(file)
+        projections = list(reader)
+
+    unique_halls = sorted(set(p[4] for p in projections))
+    hall_var = StringVar(value="Всички")
+
+    projections_window = CTkToplevel(app)
+    projections_window.title("Прожекции")
+    projections_window.geometry("700x500")
+    projections_window.iconbitmap("favicon.ico")
+    center_window(projections_window, parent=app)
+
+    CTkLabel(projections_window, text="Списък с прожекции", font=("Arial", 16)).pack(pady=10)
+
+    filter_frame = CTkFrame(projections_window)
+    filter_frame.pack(pady=5)
+
+    CTkLabel(filter_frame, text="Филтрирай по зала:").pack(side="left", padx=5)
+    CTkComboBox(filter_frame, values=["Всички"] + unique_halls, variable=hall_var, width=150).pack(side="left", padx=5)
+
+    scroll_frame = CTkScrollableFrame(projections_window, width=660, height=350)
+    scroll_frame.pack()
+
+    headers = ["ID", "Филм", "Дата", "Час", "Зала", "Цена", "Билети", "", ""]
+    for i, h in enumerate(headers):
+        CTkLabel(scroll_frame, text=h, font=("Arial", 12, "bold")).grid(row=0, column=i, padx=5, pady=5)
+
+    def draw_table(data):
+        for widget in scroll_frame.winfo_children():
+            widget.destroy()
+
+        for i, h in enumerate(headers):
+            CTkLabel(scroll_frame, text=h, font=("Arial", 12, "bold")).grid(row=0, column=i, padx=5, pady=5)
+
+        for row_num, proj in enumerate(data, start=1):
+            values = [
+                proj[0],
+                movie_id_to_title.get(proj[1], "Неизвестен"),
+                proj[2],
+                proj[3],
+                proj[4],
+                proj[5],
+                proj[6]
+            ]
+            for col_num, val in enumerate(values):
+                CTkLabel(scroll_frame, text=val).grid(row=row_num, column=col_num, padx=5, pady=2, sticky="w")
+            CTkButton(scroll_frame, text="🖊️ ", width=30, command=lambda pid=proj[0]: open_edit_projection(pid, projections)).grid(row=row_num, column=7, padx=2)
+            CTkButton(scroll_frame, text="🗑️ ", width=30, fg_color="darkred", command=lambda pid=proj[0]: confirm_delete_projection(pid, projections)).grid(row=row_num, column=8, padx=2)
+
+    def filter_by_hall():
+        selected = hall_var.get()
+        filtered = [p for p in projections if p[4] == selected] if selected != "Всички" else projections
+        draw_table(filtered)
+
+    CTkButton(filter_frame, text="Филтрирай", command=filter_by_hall).pack(side="left", padx=5)
+
+    draw_table(projections)
+
+    CTkButton(projections_window, text="➕ Добави прожекция", command=lambda: open_add_projection(projections)).pack(pady=10)
+
+
 
 def open_sales():
-    print("Продажби")
+    def refresh_table(sales):
+        sales_window.destroy()
+        open_sales()
 
-def open_reports():
-    print("Отчети")
+    def save_sales_to_csv(sales):
+        with open("seeders/sales.csv", "w", newline="", encoding="windows-1251") as file:
+            writer = csv.writer(file)
+            for sale in sales:
+                writer.writerow([sale["sale_id"], sale["projection_id"], sale["client"], sale["tickets_count"], sale["total_amount"]])
+
+    def open_add_sale(sales):
+        def save_new_sale(sales):
+            projection_id = projection_combobox.get()
+            client = entry_client.get().strip()
+            tickets_count = entry_tickets.get().strip()
+            total_amount = entry_total_amount.get().strip()
+
+            if not (projection_id and client and tickets_count and total_amount):
+                messagebox.showerror("Грешка", "Всички полета са задължителни.")
+                return
+
+            try:
+                int(tickets_count)
+                float(total_amount)
+            except:
+                messagebox.showerror("Грешка", "Невалидни стойности за билети или сума.")
+                return
+
+            new_id = str(max([int(s["sale_id"]) for s in sales] + [0]) + 1)
+            sales.append({
+                "sale_id": new_id,
+                "projection_id": projection_id,
+                "client": client,
+                "tickets_count": tickets_count,
+                "total_amount": total_amount
+            })
+            save_sales_to_csv(sales)
+            add_window.destroy()
+            refresh_table(sales)
+
+        add_window = CTkToplevel(sales_window)
+        add_window.title("Добавяне на продажба")
+        add_window.geometry("300x400")
+        center_window(add_window, parent=sales_window)
+
+        CTkLabel(add_window, text="Прожекция ID:").pack(pady=2)
+        projection_combobox = CTkComboBox(add_window, values=[p["id"] for p in load_projections()])
+        projection_combobox.pack()
+
+        CTkLabel(add_window, text="Клиент:").pack(pady=2)
+        entry_client = CTkEntry(add_window)
+        entry_client.pack()
+
+        CTkLabel(add_window, text="Брой билети:").pack(pady=2)
+        entry_tickets = CTkEntry(add_window)
+        entry_tickets.pack()
+
+        CTkLabel(add_window, text="Обща сума:").pack(pady=2)
+        entry_total_amount = CTkEntry(add_window)
+        entry_total_amount.pack()
+
+        CTkButton(add_window, text="Запази", command=lambda: save_new_sale(sales)).pack(pady=10)
+        CTkButton(add_window, text="Отказ", fg_color="darkred", command=add_window.destroy).pack()
+
+    def open_edit_sale(sale_id, sales):
+        sale = [s for s in sales if s["sale_id"] == sale_id][0]
+
+        def save_changes(sales):
+            projection_id = projection_combobox.get()
+            client = entry_client.get().strip()
+            tickets_count = entry_tickets.get().strip()
+            total_amount = entry_total_amount.get().strip()
+
+            if not (projection_id and client and tickets_count and total_amount):
+                messagebox.showerror("Грешка", "Всички полета са задължителни.")
+                return
+
+            try:
+                int(tickets_count)
+                float(total_amount)
+            except:
+                messagebox.showerror("Грешка", "Невалидни стойности за билети или сума.")
+                return
+
+            sale["projection_id"] = projection_id
+            sale["client"] = client
+            sale["tickets_count"] = tickets_count
+            sale["total_amount"] = total_amount
+            save_sales_to_csv(sales)
+            edit_window.destroy()
+            refresh_table(sales)
+
+        edit_window = CTkToplevel(sales_window)
+        edit_window.title("Редактиране на продажба")
+        edit_window.geometry("300x400")
+        center_window(edit_window, parent=sales_window)
+
+        CTkLabel(edit_window, text="Прожекция ID:").pack(pady=2)
+        projection_combobox = CTkComboBox(edit_window, values=[p["id"] for p in load_projections()])
+        projection_combobox.set(sale["projection_id"])
+        projection_combobox.pack()
+
+        CTkLabel(edit_window, text="Клиент:").pack(pady=2)
+        entry_client = CTkEntry(edit_window)
+        entry_client.insert(0, sale["client"])
+        entry_client.pack()
+
+        CTkLabel(edit_window, text="Брой билети:").pack(pady=2)
+        entry_tickets = CTkEntry(edit_window)
+        entry_tickets.insert(0, sale["tickets_count"])
+        entry_tickets.pack()
+
+        CTkLabel(edit_window, text="Обща сума:").pack(pady=2)
+        entry_total_amount = CTkEntry(edit_window)
+        entry_total_amount.insert(0, sale["total_amount"])
+        entry_total_amount.pack()
+
+        CTkButton(edit_window, text="Запази", command=lambda: save_changes(sales)).pack(pady=10)
+        CTkButton(edit_window, text="Отказ", fg_color="darkred", command=edit_window.destroy).pack()
+
+    def confirm_delete_sale(sale_id, sales):
+        if messagebox.askyesno("Потвърждение", "Наистина ли искате да изтриете тази продажба?"):
+            updated_sales = [s for s in sales if s["sale_id"] != sale_id]
+            save_sales_to_csv(updated_sales)
+            refresh_table(updated_sales)
+
+    def filter_by_amount():
+        amount = entry_filter_amount.get().strip()
+        if not amount:
+            messagebox.showerror("Грешка", "Моля, въведете сума.")
+            return
+
+        try:
+            amount = float(amount)
+        except:
+            messagebox.showerror("Грешка", "Невалидна сума.")
+            return
+
+        filtered_sales = [s for s in sales if float(s["total_amount"]) > amount]
+        draw_table(filtered_sales)
+
+    def draw_table(data):
+        for widget in scroll_frame.winfo_children():
+            widget.destroy()
+
+        headers = ["ID", "Прожекция ID", "Клиент", "Брой билети", "Обща сума", "", ""]
+        for i, h in enumerate(headers):
+            CTkLabel(scroll_frame, text=h, font=("Arial", 12, "bold")).grid(row=0, column=i, padx=5, pady=5)
+
+        for row_num, sale in enumerate(data, start=1):
+            values = [sale["sale_id"], sale["projection_id"], sale["client"], sale["tickets_count"], sale["total_amount"]]
+            for col_num, val in enumerate(values):
+                CTkLabel(scroll_frame, text=val).grid(row=row_num, column=col_num, padx=5, pady=2, sticky="w")
+            CTkButton(scroll_frame, text="🖊️ ", width=30, command=lambda sid=sale["sale_id"]: open_edit_sale(sid, sales)).grid(row=row_num, column=5, padx=2)
+            CTkButton(scroll_frame, text="🗑️ ", width=30, fg_color="darkred", command=lambda sid=sale["sale_id"]: confirm_delete_sale(sid, sales)).grid(row=row_num, column=6, padx=2)
+
+    sales = load_sales()
+    sales_window = CTkToplevel(app)
+    sales_window.title("Продажби")
+    sales_window.geometry("700x500")
+    sales_window.iconbitmap("favicon.ico")
+    center_window(sales_window, parent=app)
+
+    CTkLabel(sales_window, text="Списък с продажби", font=("Arial", 16)).pack(pady=10)
+
+    filter_frame = CTkFrame(sales_window)
+    filter_frame.pack(pady=5)
+
+    CTkLabel(filter_frame, text="Филтрирай по сума над:").pack(side="left", padx=5)
+    entry_filter_amount = CTkEntry(filter_frame)
+    entry_filter_amount.pack(side="left", padx=5)
+
+    CTkButton(filter_frame, text="Филтрирай", command=filter_by_amount).pack(side="left", padx=5)
+
+    scroll_frame = CTkScrollableFrame(sales_window, width=660, height=350)
+    scroll_frame.pack()
+
+    draw_table(sales)
+
+    CTkButton(sales_window, text="➕ Добави продажба", command=lambda: open_add_sale(sales)).pack(pady=10)
+
 
 def open_genres():
     def refresh_table():
@@ -385,7 +817,6 @@ CTkButton(app, text="Филми",  command=open_films).pack(pady=5)
 CTkButton(app, text="Жанрове", command=open_genres).pack(pady=5)
 CTkButton(app, text="Прожекции", command=open_projections).pack(pady=5)
 CTkButton(app, text="Продажби", command=open_sales).pack(pady=5)
-CTkButton(app, text="Отчети", command=open_reports).pack(pady=5)
 
 # end of buttons in main window
 
