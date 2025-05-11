@@ -849,6 +849,18 @@ def open_genres():
 
     CTkButton(genres_window, text="➕ Добави нов жанр", command=open_add_genre).pack(pady=10)
 
+
+def open_about_app():
+    about_window=CTkToplevel(app)
+    about_window.title("За приложението")
+    about_window.geometry("300x400")
+    about_window.iconbitmap("favicon.ico")
+    center_window(about_window, parent=app)
+    CTkLabel(about_window, text="Cinema Vision v1.0", font=("Arial", 16)).pack(pady=10)
+    CTkLabel(about_window, text="Разработено от: Христо Събев (124767) и Джеймс Сашев (124479)", font=("Arial", 12)).pack(pady=10)
+    CTkButton(about_window, text="Затвори", command=about_window.destroy).pack(pady=10)
+
+
 # end of functions
 
 
@@ -868,7 +880,7 @@ file_menu.add_command(label="Изход", command=app.quit)
 menu.add_cascade(label="Файл", menu=file_menu)
 
 help_menu = tkinter.Menu(menu, tearoff=0)
-help_menu.add_command(label="За приложението", command=lambda: print("Cinema Vision v1.0"))
+help_menu.add_command(label="За приложението", command=open_about_app)
 menu.add_cascade(label="Помощ", menu=help_menu)
 
 app.config(menu=menu)
