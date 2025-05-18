@@ -785,21 +785,18 @@ def open_sales():
         headers = ["ID", "Прожекция", "Клиент", "Брой билети", "Обща сума", "", ""]
         col = 0
         for h in headers:
-            CTkLabel(scroll_frame, text=h, font=("Arial", 12, "bold")).grid(row=0, column=col, padx=5, pady=5)
+            CTkLabel(scroll_frame, text=h, font=("Arial", 12, "bold")).grid(row=0, column=col, padx=16, pady=8)
             col += 1
 
         row_num = 1
         for sale in data:
-            # projection = projections_by_id.get(sale["projection_id"], {})
-            # movie_name = movies_by_id.get(projection.get("movie_id", ""), "Неизвестен филм")
-            CTkLabel(scroll_frame, text=sale["sale_id"]).grid(row=row_num, column=0, padx=5, pady=2, sticky="w")
-            CTkLabel(scroll_frame, text=projection_id_to_name.get(sale["projection_id"], "Неизвестна прожекция")).grid(row=row_num, column=1, padx=5, pady=2, sticky="w")
-            # CTkLabel(scroll_frame, text=movie_name).grid(row=row_num, column=2, padx=5, pady=2, sticky="w")
-            CTkLabel(scroll_frame, text=sale["client"]).grid(row=row_num, column=3, padx=5, pady=2, sticky="w")
-            CTkLabel(scroll_frame, text=sale["tickets_count"]).grid(row=row_num, column=4, padx=5, pady=2, sticky="w")
-            CTkLabel(scroll_frame, text=sale["total_amount"]).grid(row=row_num, column=5, padx=5, pady=2, sticky="w")
-            CTkButton(scroll_frame, text="🖊️ ", width=30, command=lambda sid=sale["sale_id"]: open_edit_sale(sid)).grid(row=row_num, column=6, padx=2)
-            CTkButton(scroll_frame, text="🗑️ ", width=30, fg_color="darkred", command=lambda sid=sale["sale_id"]: confirm_delete_sale(sid, sales)).grid(row=row_num, column=7, padx=2)
+            CTkLabel(scroll_frame, text=sale["sale_id"]).grid(row=row_num, column=0, padx=16, pady=6, sticky="w")
+            CTkLabel(scroll_frame, text=projection_id_to_name.get(sale["projection_id"], "Неизвестна прожекция")).grid(row=row_num, column=1, padx=16, pady=6, sticky="w")
+            CTkLabel(scroll_frame, text=sale["client"]).grid(row=row_num, column=2, padx=16, pady=6, sticky="w")
+            CTkLabel(scroll_frame, text=sale["tickets_count"]).grid(row=row_num, column=3, padx=16, pady=6, sticky="w")
+            CTkLabel(scroll_frame, text=sale["total_amount"]).grid(row=row_num, column=4, padx=16, pady=6, sticky="w")
+            CTkButton(scroll_frame, text="🖊️ ", width=30, command=lambda sid=sale["sale_id"]: open_edit_sale(sid)).grid(row=row_num, column=5, padx=8, pady=6)
+            CTkButton(scroll_frame, text="🗑️ ", width=30, fg_color="darkred", command=lambda sid=sale["sale_id"]: confirm_delete_sale(sid, sales)).grid(row=row_num, column=6, padx=8, pady=6)
             row_num += 1
 
     projections = load_projections()
@@ -824,7 +821,7 @@ def open_sales():
 
     sales_window = CTkToplevel(app)
     sales_window.title("Продажби")
-    sales_window.geometry("900x700")
+    sales_window.geometry("1100x700")
     center_window(sales_window, parent=app)
 
     CTkLabel(sales_window, text="Списък с продажби", font=("Arial", 16)).pack(pady=10)
@@ -842,8 +839,29 @@ def open_sales():
 
     CTkButton(filter_frame, text="Търси", command=lambda: filter_sales_by_price(sales, entry_min_price.get(), entry_max_price.get())).pack(side="left", padx=5)
 
-    scroll_frame = CTkScrollableFrame(sales_window, width=900, height=350)
+    scroll_frame = CTkScrollableFrame(sales_window, width=1100, height=350)
     scroll_frame.pack()
+
+    def draw_table(data):
+        for widget in scroll_frame.winfo_children():
+            widget.destroy()
+
+        headers = ["ID", "Прожекция", "Клиент", "Брой билети", "Обща сума", "", ""]
+        col = 0
+        for h in headers:
+            CTkLabel(scroll_frame, text=h, font=("Arial", 12, "bold")).grid(row=0, column=col, padx=16, pady=8)
+            col += 1
+
+        row_num = 1
+        for sale in data:
+            CTkLabel(scroll_frame, text=sale["sale_id"]).grid(row=row_num, column=0, padx=16, pady=6, sticky="w")
+            CTkLabel(scroll_frame, text=projection_id_to_name.get(sale["projection_id"], "Неизвестна прожекция")).grid(row=row_num, column=1, padx=16, pady=6, sticky="w")
+            CTkLabel(scroll_frame, text=sale["client"]).grid(row=row_num, column=2, padx=16, pady=6, sticky="w")
+            CTkLabel(scroll_frame, text=sale["tickets_count"]).grid(row=row_num, column=3, padx=16, pady=6, sticky="w")
+            CTkLabel(scroll_frame, text=sale["total_amount"]).grid(row=row_num, column=4, padx=16, pady=6, sticky="w")
+            CTkButton(scroll_frame, text="🖊️ ", width=30, command=lambda sid=sale["sale_id"]: open_edit_sale(sid)).grid(row=row_num, column=5, padx=8, pady=6)
+            CTkButton(scroll_frame, text="🗑️ ", width=30, fg_color="darkred", command=lambda sid=sale["sale_id"]: confirm_delete_sale(sid, sales)).grid(row=row_num, column=6, padx=8, pady=6)
+            row_num += 1
 
     draw_table(sales)
 
